@@ -136,16 +136,25 @@ start_over:
 
 	} else {
 		/* Scan the line to see whether we have a target line or a macro definition */
-		/* Although it shouldn't make a difference, it might be more ideomatic to
-		 * use libgrapheme to scan over whole UTF-8 characters instead. */
 		for (c = s; *c; c++) {
-			if (*c == ':') {
+			switch (*c) {
+			case ':':
+				if (!memcmp(c, "::=", 3)) {
+					/* apparently, this style of macro definition is part of the POSIX standard since 2012. */
+					return MACRO_DEF;
+				}
+				if (!memcmp(c, ":=", 2)) {
+					return MACRO_DEF;
+				}
 				return TARGET;
-			}
-			if (*c == '=') {
+			case '+': case '?': case '!':
+				if (c[1] == '=') {
+					return MACRO_DEF;
+				}
+				break;
+			case '=':
 				return MACRO_DEF;
 			}
-			/* TODO Recognize GNU-style assignments (:=, +=, ?=, etc.) */
 		}
 
 		if (*s == '-') { /* We will warn about this later */
