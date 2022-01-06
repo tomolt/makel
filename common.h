@@ -79,6 +79,8 @@ enum line_class {
 	BLANK, /* Classified as comment lines in the specification */
 	COMMENT,
 	COMMAND_LINE,
+	TARGET,
+	MACRO_DEF,
 	OTHER
 };
 

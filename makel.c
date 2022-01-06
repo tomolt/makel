@@ -94,7 +94,7 @@ static enum line_class
 classify_line(struct line *line)
 {
 	int warned_bad_space = 0;
-	char *s;
+	char *s, *c;
 
 	if (!line->len)
 		return EMPTY;
@@ -135,6 +135,19 @@ start_over:
 		return COMMAND_LINE;
 
 	} else {
+		/* Scan the line to see whether we have a target line or a macro definition */
+		/* Although it shouldn't make a difference, it might be more ideomatic to
+		 * use libgrapheme to scan over whole UTF-8 characters instead. */
+		for (c = s; *c; c++) {
+			if (*c == ':') {
+				return TARGET;
+			}
+			if (*c == '=') {
+				return MACRO_DEF;
+			}
+			/* TODO Recognize GNU-style assignments (:=, +=, ?=, etc.) */
+		}
+
 		if (*s == '-') { /* We will warn about this later */
 			s++;
 			while (isspace(*s))
@@ -204,9 +217,17 @@ main(int argc, char *argv[])
 			 *      with <tab> followed by zero or more whitespace, and then
 			 *      a <hash>, it a command line, not a comment line. */
 			/* TODO on line continuation, remove first '\t', if any, and join with '\\\n' */
-		case OTHER:
+			break;
+
+		case TARGET:
 			/* TODO first non-comment line shall be special target .POSIX without
 			 *      prerequisites or commands, behaviour is unspecified otherwise */
+			break;
+
+		case MACRO_DEF:
+			break;
+
+		case OTHER:
 			/* TODO on line continuation, remove leading white space and join with ' ' */
 			break;
 
