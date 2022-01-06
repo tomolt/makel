@@ -90,6 +90,21 @@ check_line_continuations(struct line *lines, size_t nlines)
 }
 
 
+static char *
+skip_substitution(char *c)
+{
+	if (*c != '$') return c;
+	c++;
+	if (*c == '(') {
+		while (*c && *c != ')') c++;
+	} else if (*c == '{') {
+		while (*c && *c != '}') c++;
+	}
+	if (*c) c++;
+	return c;
+}
+
+
 static enum line_class
 classify_line(struct line *line)
 {
@@ -136,8 +151,14 @@ start_over:
 
 	} else {
 		/* Scan the line to see whether we have a target line or a macro definition */
-		for (c = s; *c; c++) {
+		c = s;
+		for (;;) {
 			switch (*c) {
+			case '$':
+				/* skip over substitutions to not get fooled by idioms such as '${srcs:.c=.o}: <prerequisites>'. */
+				/* not bullet-proof either, since we don't actually expand the substitution, which may insert another ':'. */
+				c = skip_substitution(c);
+				break;
 			case ':':
 				if (!memcmp(c, "::=", 3)) {
 					/* apparently, this style of macro definition is part of the POSIX standard since 2012. */
@@ -151,9 +172,12 @@ start_over:
 				if (c[1] == '=') {
 					return MACRO_DEF;
 				}
+				c++;
 				break;
 			case '=':
 				return MACRO_DEF;
+			default:
+				c++;
 			}
 		}
 
